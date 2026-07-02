@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+
+  image-service:
+    build:
+      context: ./image-service
+    container_name: image-service
+    ports:
+      - "8001:8000"
+
+  ml-service:
+    build:
+      context: ./ml-service
+    container_name: ml-service
+    ports:
+      - "50051:50051"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - image-service
