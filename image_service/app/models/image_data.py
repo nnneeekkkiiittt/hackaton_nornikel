@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
 
 
 @dataclass
@@ -27,3 +28,5 @@ class ImageData:
 
     # сюда постепенно будут складываться результаты этапов
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    tensor: torch.Tensor | None = None

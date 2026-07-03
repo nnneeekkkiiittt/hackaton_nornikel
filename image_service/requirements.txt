@@ -13,3 +13,7 @@ grpcio-tools
 pydantic
 
 python-multipart
+
+torch
+
+grpcio

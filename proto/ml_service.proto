@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ml;
+
+service MLService {
+  rpc Predict (PredictRequest) returns (PredictResponse);
+}
+
+message PredictRequest {
+  // уже готовый тензор после preprocessing
+  repeated float tensor = 1;
+
+  // форма тензора (например [1, 1, 1024, 1024])
+  repeated int32 shape = 2;
+
+  // метаданные
+  string filename = 3;
+}
+
+message PredictResponse {
+  string label = 1;
+  float confidence = 2;
+
+  // дополнительные метрики (позже пригодятся для XRD/SEM)
+  map<string, float> metrics = 3;
+}

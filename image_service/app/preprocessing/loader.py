@@ -3,7 +3,7 @@ from app.models.image_data import ImageData
 
 import cv2
 
-from image_service.app.preprocessing.base import ProcessingStep
+from app.preprocessing.base import ProcessingStep
 
 
 class ImageLoader(ProcessingStep):

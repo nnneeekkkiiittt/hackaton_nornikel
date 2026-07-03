@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package image;
+
+// ===== Service =====
+service ImageService {
+  rpc Predict (ImageRequest) returns (ImageResponse);
+}
+
+message ImageRequest {
+
+  // flattened tensor (image after preprocessing)
+  repeated float tensor = 1;
+
+  // shape of tensor: [1, 1, H, W]
+  repeated int32 shape = 2;
+
+  // filename for tracing/debug
+  string filename = 3;
+
+  // optional debug flag
+  bool debug = 4;
+}
+
+message ImageResponse {
+
+  string label = 1;
+
+  float confidence = 2;
+
+  // дополнительные метрики модели
+  map<string, float> metrics = 3;
+}

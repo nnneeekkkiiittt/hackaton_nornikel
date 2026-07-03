@@ -4,7 +4,7 @@ import numpy as np
 
 from app.models.image_data import ImageData
 
-from image_service.app.preprocessing.base import ProcessingStep
+from app.preprocessing.base import ProcessingStep
 
 
 class ImageValidationError(Exception):
