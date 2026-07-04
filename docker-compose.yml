@@ -6,6 +6,9 @@ services:
     container_name: ml_service
     ports:
       - "50051:50051"
+    volumes:
+      - ./ml_service:/app
+      - ./proto:/proto
     restart: unless-stopped
 
   image-service:
@@ -13,9 +16,22 @@ services:
       context: ./image_service
     container_name: image_service
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       - ./image_service:/app
+      - ./proto:/proto
     depends_on:
       - ml-service
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./service
+    container_name: streamlit_service
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://image-service:8000/api/analyze
+    depends_on:
+      - image-service
     restart: unless-stopped

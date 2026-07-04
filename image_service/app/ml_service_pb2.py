@@ -24,17 +24,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10ml_service.proto\x12\x02ml\"\x1f\n\x0ePredictRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\"Q\n\x0fPredictResponse\x12\x17\n\x0ftalc_percentage\x18\x01 \x01(\x02\x12\x13\n\x0boverlay_png\x18\x02 \x01(\x0c\x12\x10\n\x08mask_png\x18\x03 \x01(\x0c\x32?\n\tMLService\x12\x32\n\x07Predict\x12\x12.ml.PredictRequest\x1a\x13.ml.PredictResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10ml_service.proto\x12\x02ml\"\x1f\n\x0ePredictRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\"\xef\x01\n\x0fPredictResponse\x12\x17\n\x0ftalc_percentage\x18\x01 \x01(\x02\x12\x13\n\x0boverlay_png\x18\x02 \x01(\x0c\x12\x10\n\x08mask_png\x18\x03 \x01(\x0c\x12\x17\n\x0fpredicted_class\x18\x04 \x01(\t\x12H\n\x13\x63lass_probabilities\x18\x05 \x03(\x0b\x32+.ml.PredictResponse.ClassProbabilitiesEntry\x1a\x39\n\x17\x43lassProbabilitiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\x32?\n\tMLService\x12\x32\n\x07Predict\x12\x12.ml.PredictRequest\x1a\x13.ml.PredictResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'ml_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
+  _globals['_PREDICTRESPONSE_CLASSPROBABILITIESENTRY']._loaded_options = None
+  _globals['_PREDICTRESPONSE_CLASSPROBABILITIESENTRY']._serialized_options = b'8\001'
   _globals['_PREDICTREQUEST']._serialized_start=24
   _globals['_PREDICTREQUEST']._serialized_end=55
-  _globals['_PREDICTRESPONSE']._serialized_start=57
-  _globals['_PREDICTRESPONSE']._serialized_end=138
-  _globals['_MLSERVICE']._serialized_start=140
-  _globals['_MLSERVICE']._serialized_end=203
+  _globals['_PREDICTRESPONSE']._serialized_start=58
+  _globals['_PREDICTRESPONSE']._serialized_end=297
+  _globals['_PREDICTRESPONSE_CLASSPROBABILITIESENTRY']._serialized_start=240
+  _globals['_PREDICTRESPONSE_CLASSPROBABILITIESENTRY']._serialized_end=297
+  _globals['_MLSERVICE']._serialized_start=299
+  _globals['_MLSERVICE']._serialized_end=362
 # @@protoc_insertion_point(module_scope)
