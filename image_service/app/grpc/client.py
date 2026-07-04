@@ -1,7 +1,7 @@
 import grpc
 import numpy as np
-import torch
-
+from PIL import Image
+from io import BytesIO
 from app.grpc import ml_pb2, ml_pb2_grpc
 
 
@@ -11,19 +11,28 @@ class MLClient:
         self.channel = grpc.insecure_channel(host)
         self.stub = ml_pb2_grpc.MLServiceStub(self.channel)
 
-    def predict(self, tensor: torch.Tensor):
+    def predict(self, image: np.ndarray):
+        pil_image = Image.fromarray(image)
 
-        np_tensor = tensor.cpu().numpy()
+        buffer = BytesIO()
+        pil_image.save(buffer, format="PNG")
 
-        request = ml_pb2.TensorRequest(
-            data=np_tensor.tobytes(),
-            shape=list(np_tensor.shape),
-            dtype=str(np_tensor.dtype),
+        request = ml_pb2.PredictRequest(
+            image=buffer.getvalue()
         )
 
         response = self.stub.Predict(request)
 
+        overlay = Image.open(BytesIO(response.overlay_png)).convert("RGB")
+        mask = Image.open(BytesIO(response.mask_png))
+
+
+
+        response = self.stub.Predict(request)
+        overlay = Image.open(BytesIO(response.overlay_png)).convert("RGB")
+        mask = Image.open(BytesIO(response.mask_png))
         return {
-            "label": response.label,
-            "confidence": response.confidence,
+            "talc_percentage": response.talc_percentage,
+            "overlay": overlay,
+            "mask": mask,
         }

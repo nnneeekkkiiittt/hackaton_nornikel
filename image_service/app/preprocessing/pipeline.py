@@ -21,7 +21,7 @@ class PreprocessingPipeline:
             ContrastEnhancer(),
             ImageResizer(target_size=target_size),
             ImageNormalizer(),
-            TensorConverter(),
+            #TensorConverter(),
         ]
 
     def process(self, data: ImageData) -> ImageData:

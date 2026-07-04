@@ -11,3 +11,10 @@ services:
     volumes:
       - ./image_service:/app
     restart: unless-stopped
+
+  ml-service:
+    build:
+      context: ./ml_service
+    container_name: ml_service
+    ports:
+      - "50051:50051"

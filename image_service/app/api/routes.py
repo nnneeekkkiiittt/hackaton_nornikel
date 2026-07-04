@@ -2,12 +2,13 @@ from fastapi import APIRouter, File, UploadFile, HTTPException
 
 from app.preprocessing.loader import ImageLoader
 from app.preprocessing.pipeline import PreprocessingPipeline
+from app.grpc.client import MLClient
 
 router = APIRouter(prefix="/api")
 
 loader = ImageLoader()
 pipeline = PreprocessingPipeline()
-
+ml_client = MLClient()
 
 @router.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -21,12 +22,11 @@ async def analyze(file: UploadFile = File(...)):
         )
 
         result = pipeline.process(data)
-
+        prediction = ml_client.predict(result.image)
         return {
             "status": "success",
             "filename": result.filename,
-            "shape": list(result.tensor.shape),
-            "dtype": str(result.tensor.dtype),
+            "talc_percentage": prediction["talc_percentage"],
         }
 
     except Exception as e:

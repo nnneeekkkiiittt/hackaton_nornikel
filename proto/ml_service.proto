@@ -7,20 +7,11 @@ service MLService {
 }
 
 message PredictRequest {
-  // уже готовый тензор после preprocessing
-  repeated float tensor = 1;
-
-  // форма тензора (например [1, 1, 1024, 1024])
-  repeated int32 shape = 2;
-
-  // метаданные
-  string filename = 3;
+  bytes image = 1;
 }
 
 message PredictResponse {
-  string label = 1;
-  float confidence = 2;
-
-  // дополнительные метрики (позже пригодятся для XRD/SEM)
-  map<string, float> metrics = 3;
+  float talc_percentage = 1;
+  bytes overlay_png = 2;
+  bytes mask_png = 3;
 }
