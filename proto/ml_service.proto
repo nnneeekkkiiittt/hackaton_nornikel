@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ml;
+
+service MLService {
+  rpc Predict (PredictRequest) returns (PredictResponse);
+}
+
+message PredictRequest {
+  bytes image = 1;
+}
+
+message PredictResponse {
+  float talc_percentage = 1;
+  bytes overlay_png = 2;
+  bytes mask_png = 3;
+}
