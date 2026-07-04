@@ -4,6 +4,8 @@ import cv2
 import albumentations as A
 import segmentation_models_pytorch as smp
 from PIL import Image
+import torchvision.models as models
+import torch.nn as nn
 
 class TalcPredictor:
     def __init__(self, weights_path, device=None):
@@ -78,20 +80,79 @@ class TalcPredictor:
         }
 
 
-# использование
+class ClassPredictor():
+    def __init__(self, weights_path, device=None):
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        self.classes = ['ordinary', 'talcose', 'refractory']
+        # Рядовая - 0, тальковая - 1, труднообогатимая (упорная) - 2
+
+        self.model = models.efficientnet_b3(weights=None)
+        in_features = self.model.classifier[1].in_features
+        self.model.classifier[1] = nn.Linear(in_features, 3)
+
+        self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
+        self.model.to(self.device)
+        self.model.eval()
+        
+        self.transform = A.Compose([
+            A.Resize(300, 300),
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+        ])
+
+    def predict(self, image_np, patch_size=512, stride=512):
+        "Нарезаем панораму, классифицируем патчи. Возвращаем средний класс"
+
+        h_orig, w_orig, c = image_np.shape
+
+        pad_y = max(0, patch_size - h_orig)
+        pad_x = max(0, patch_size - w_orig)
+
+        if pad_y > 0 or pad_x > 0:
+            image_np = cv2.copyMakeBorder(image_np, 0, pad_y, 0, pad_x, cv2.BORDER_CONSTANT, value=0)
+
+        h, w, c = image_np.shape
+        
+        predictions = []
+        device_type = "cuda" if "cuda" in str(self.device) else "cpu"
+
+        for y in range(0, h - patch_size + 1, stride):
+            for x in range(0, w - patch_size + 1, stride):
+                patch = image_np[y:y+patch_size, x:x+patch_size]
+                augmented = self.transform(image=patch)
+                patch_tensor = torch.from_numpy(augmented['image'].transpose(2, 0, 1)).float().unsqueeze(0).to(self.device)
+                with torch.inference_mode():
+                    with torch.amp.autocast(device_type):
+                        preds = self.model(patch_tensor)
+                # Получаем вероятности классов через Softmax и переводим в Float32 перед numpy
+                probs = torch.softmax(preds, dim=1).squeeze(0).float().cpu().numpy()
+                predictions.append(probs)
+
+        mean_probs = np.mean(predictions, axis=0)
+        best_class_idx = np.argmax(mean_probs)
+        predicted_class = self.classes[best_class_idx]
+        
+        return {
+            #рядовая- 0, тальковая - 1, трудообогатимая - 2
+            "class": predicted_class,
+            "probabilities": {self.classes[i]: float(mean_probs[i]) for i in range(3)}
+        }
+
+
+#ИСПОЛЬЗОВАНИЕ 2Х КЛАССОВ
+
 # if __name__ == '__main__':
-#     import os
-#     test_img_path = "path to the image"
-    
-#     if os.path.exists(test_img_path):
-#         predictor = TalcPredictor("best_unet.pth")
-#         img = np.array(Image.open(test_img_path).convert("RGB"))
-        
-#         result = predictor.predict_panorama(img)
-#         print(f"Predicted talc percentage: {result['talc_percentage']}%")
-        
-#         result["overlay"].save("test_prediction_overlay.png")
-#         result["mask"].save("test_prediction_mask.png")
-#         print("Outputs saved successfully.")
-#     else:
-#         print(f"Test image not found at {test_img_path}")
+#     class_predictor = ClassPredictor("checkpoints_cls/best_classifier_weights.pt")
+#     talc_predictor = TalcPredictor("best_unet_talc_f1_0_898.pth")
+#
+#     img_path = "dataset/ores_by_grade/talcose/DSCN5186.JPG"
+#     img = np.array(Image.open(img_path).convert("RGB"))
+#
+#     class_result = class_predictor.predict(img)
+#     print(f"Класс руды: {class_result['class']}")
+#
+#     seg_result = talc_predictor.predict_panorama(img)
+#     print(f"Процент талька: {seg_result['talc_percentage']}%")
+#         
+#     seg_result['overlay'].save("test_pipeline_overlay.png")
+#     seg_result['mask'].save("test_pipeline_mask.png")
+#     print("Маски успешно сохранены!")
