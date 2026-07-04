@@ -3,8 +3,8 @@ import grpc
 import numpy as np
 from PIL import Image
 
-import ml_service_pb2
-import ml_service_pb2_grpc
+from app.grpc import ml_service_pb2
+from app.grpc import ml_service_pb2_grpc
 
 from app.inference import TalcPredictor
 
