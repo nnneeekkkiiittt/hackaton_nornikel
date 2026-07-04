@@ -2,14 +2,14 @@ import grpc
 import numpy as np
 from PIL import Image
 from io import BytesIO
-from app.grpc import ml_pb2, ml_pb2_grpc
+from app import ml_service_pb2, ml_service_pb2_grpc
 
 
 class MLClient:
 
     def __init__(self, host: str = "ml-service:50051"):
         self.channel = grpc.insecure_channel(host)
-        self.stub = ml_pb2_grpc.MLServiceStub(self.channel)
+        self.stub = ml_service_pb2_grpc.MLServiceStub(self.channel)
 
     def predict(self, image: np.ndarray):
         pil_image = Image.fromarray(image)
@@ -17,7 +17,7 @@ class MLClient:
         buffer = BytesIO()
         pil_image.save(buffer, format="PNG")
 
-        request = ml_pb2.PredictRequest(
+        request = ml_service_pb2.PredictRequest(
             image=buffer.getvalue()
         )
 

@@ -1,8 +1,8 @@
 from concurrent import futures
 import grpc
 
-from .service import MLService
-import ml_service_pb2_grpc
+from app.grpc.service import MLService
+from app import ml_service_pb2_grpc
 
 
 def serve():
