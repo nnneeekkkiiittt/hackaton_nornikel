@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
-
+import base64
+from io import BytesIO
 from app.preprocessing.loader import ImageLoader
 from app.preprocessing.pipeline import PreprocessingPipeline
 from app.grpc_client.client import MLClient
@@ -16,16 +17,14 @@ async def analyze(file: UploadFile = File(...)):
     try:
         image_bytes = await file.read()
 
-        data = loader.from_bytes(
-            image_bytes,
-            filename=file.filename,
-        )
-
-        result = pipeline.process(data)
-        import base64
+        from PIL import Image
         from io import BytesIO
-
-        prediction = ml_client.predict(result.image)
+        import numpy as np
+        
+        pil_image = Image.open(BytesIO(image_bytes)).convert("RGB")
+        image_np = np.array(pil_image)
+        
+        prediction = ml_client.predict(image_np)
 
         buffered_overlay = BytesIO()
         prediction["overlay"].save(buffered_overlay, format="PNG")
@@ -37,9 +36,7 @@ async def analyze(file: UploadFile = File(...)):
 
         return {
             "status": "success",
-            "filename": result.filename,
-            "shape": str(result.image.shape),
-            "dtype": str(result.image.dtype),
+            "filename": file.filename,
             "talc_percentage": prediction["talc_percentage"],
             "predicted_class": prediction["predicted_class"],
             "class_probabilities": prediction["class_probabilities"],

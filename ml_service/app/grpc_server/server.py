@@ -6,7 +6,14 @@ from app import ml_service_pb2_grpc
 
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+    options = [
+        ('grpc.max_receive_message_length', 64 * 1024 * 1024),
+        ('grpc.max_send_message_length', 64 * 1024 * 1024)
+    ]
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=4),
+        options=options
+    )
 
     ml_service_pb2_grpc.add_MLServiceServicer_to_server(
         MLService(),

@@ -64,13 +64,13 @@ class TalcPredictor:
                 )
 
         cropped_mask = full_mask[:h_orig, :w_orig]
-        talc_pixels = np.sum(cropped_mask == 1)
+        talc_pixels = np.sum(cropped_mask == 0)
         total_pixels = h_orig * w_orig
         talc_percentage = (talc_pixels / total_pixels) * 100
         
         orig_img = image_np[:h_orig, :w_orig].copy()
         overlay = orig_img.copy()
-        overlay[cropped_mask == 1] = [0, 120, 255]
+        overlay[cropped_mask == 0] = [0, 120, 255]
         overlay_img = cv2.addWeighted(overlay, 0.4, orig_img, 0.6, 0)
         
         return {

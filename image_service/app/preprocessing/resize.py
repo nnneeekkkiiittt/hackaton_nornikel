@@ -30,10 +30,16 @@ class ImageResizer(ProcessingStep):
             interpolation=cv2.INTER_AREA,
         )
 
-        canvas = np.zeros(
-            (self.target_size, self.target_size),
-            dtype=resized.dtype,
-        )
+        if image.ndim == 3:
+            canvas = np.zeros(
+                (self.target_size, self.target_size, image.shape[2]),
+                dtype=resized.dtype,
+            )
+        else:
+            canvas = np.zeros(
+                (self.target_size, self.target_size),
+                dtype=resized.dtype,
+            )
 
         x = (self.target_size - new_w) // 2
         y = (self.target_size - new_h) // 2

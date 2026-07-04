@@ -16,12 +16,6 @@ class PreprocessingPipeline:
 
         self.steps: list[ProcessingStep] = [
             ImageValidator(),
-            GrayscaleConverter(),
-            ImageResizer(target_size=target_size),
-            Denoiser(),
-            ContrastEnhancer(),
-            ImageNormalizer(),
-            #TensorConverter(),
         ]
 
     def process(self, data: ImageData) -> ImageData:

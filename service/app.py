@@ -3,6 +3,16 @@ import requests
 from PIL import Image
 import pandas as pd
 import io
+from io import BytesIO
+import tempfile
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Image as PDFImage,
+)
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
 
 import os
 
@@ -45,22 +55,27 @@ if uploaded_file is not None:
                     # --- ВЫВОД ДАННЫХ ИЗ ВАШЕГО ROUTES.PY ---
                     st.subheader("Результаты ")
 
+                    # Локализация названия класса для таблицы результатов
+                    class_names_ru_simple = {
+                        "ordinary": "Рядовая",
+                        "talcose": "Тальковая",
+                        "refractory": "Труднообогатимая"
+                    }
+                    raw_class = res_data.get("predicted_class")
+                    translated_class = class_names_ru_simple.get(raw_class, raw_class)
+
                     # Формируем таблицу на основе реального ответа бэкенда
                     metrics = {
                         "Параметр": [
                             "Статус операции", 
                             "Имя файла", 
-                            "Размерность тензора (Shape)",
-                            "Тип данных (Dtype)",
                             "Класс руды",
                             "Процент талька"
                         ],
                         "Значение": [
                             str(res_data.get("status")),
                             str(res_data.get("filename")),
-                            str(res_data.get("shape")),
-                            str(res_data.get("dtype")),
-                            str(res_data.get("predicted_class")),
+                            str(translated_class),
                             f"{res_data.get('talc_percentage')}%"
                         ]
                     }
@@ -113,22 +128,154 @@ if uploaded_file is not None:
                         )
 
                     with col2:
-                        probs_str = ", ".join([f"{k}: {v * 100:.1f}%" for k, v in probs.items()]) if probs else "N/A"
-                        report_text = (
-                            f"ОТЧЕТ ПО ПРЕПРОЦЕССИНГУ СНИМКА\n"
-                            f"Файл: {res_data.get('filename')}\n"
-                            f"Статус бэкенда: {res_data.get('status')}\n"
-                            f"Размер тензора: {res_data.get('shape')}\n"
-                            f"Тип тензора: {res_data.get('dtype')}\n"
-                            f"Класс руды: {res_data.get('predicted_class')}\n"
-                            f"Вероятности классов: {probs_str}\n"
-                            f"Процент талька: {res_data.get('talc_percentage')}%\n"
+
+                        pdf_buffer = BytesIO()
+
+                        doc = SimpleDocTemplate(pdf_buffer)
+
+                        styles = getSampleStyleSheet()
+
+                        story = []
+
+                        # ---------- Title ----------
+
+                        story.append(
+                            Paragraph("Talc Inclusion Analysis Report", styles["Title"])
                         )
+
+                        story.append(Spacer(1, 0.5 * cm))
+
+                        # ---------- General information ----------
+
+                        story.append(
+                            Paragraph(
+                                f"<b>File:</b> {res_data.get('filename')}",
+                                styles["Normal"],
+                            )
+                        )
+
+                        story.append(
+                            Paragraph(
+                                f"<b>Predicted class:</b> {res_data.get('predicted_class')}",
+                                styles["Normal"],
+                            )
+                        )
+
+                        story.append(
+                            Paragraph(
+                                f"<b>Talc coverage:</b> {float(res_data.get('talc_percentage')):.2f} %",
+                                styles["Normal"],
+                            )
+                        )
+
+                        story.append(Spacer(1, 0.5 * cm))
+
+                        # ---------- Classification confidence ----------
+
+                        story.append(
+                            Paragraph("Classification confidence", styles["Heading2"])
+                        )
+
+                        probs = res_data.get("class_probabilities", {})
+
+                        if probs:
+                            for cls, prob in probs.items():
+                                story.append(
+                                    Paragraph(
+                                        f"{cls}: {prob * 100:.2f} %",
+                                        styles["Normal"],
+                                    )
+                                )
+                        else:
+                            story.append(
+                                Paragraph(
+                                    "Confidence values are unavailable.",
+                                    styles["Normal"],
+                                )
+                            )
+
+                        story.append(Spacer(1, 0.5 * cm))
+
+                        # ---------- Automatic interpretation ----------
+
+                        talc = float(res_data.get("talc_percentage"))
+                        predicted_class = res_data.get("predicted_class")
+
+                        if talc < 5:
+                            talc_text = "low talc content"
+                        elif talc < 20:
+                            talc_text = "moderate talc content"
+                        else:
+                            talc_text = "high talc content"
+
+                        conclusion = (
+                            f"The analyzed sample was classified as "
+                            f"<b>{predicted_class}</b>. "
+                            f"The estimated talc coverage is "
+                            f"<b>{talc:.2f}%</b>, indicating "
+                            f"<b>{talc_text}</b>. "
+                            f"The highlighted regions correspond to the detected talc inclusions."
+                        )
+
+                        story.append(
+                            Paragraph("Automatic interpretation", styles["Heading2"])
+                        )
+
+                        story.append(
+                            Paragraph(conclusion, styles["Normal"])
+                        )
+
+                        story.append(Spacer(1, 0.7 * cm))
+
+                        # ---------- Overlay ----------
+
+                        if overlay_image is not None:
+                            story.append(
+                                Paragraph("Detected talc regions", styles["Heading2"])
+                            )
+
+                            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                                overlay_image.save(tmp.name)
+
+                                story.append(
+                                    PDFImage(
+                                        tmp.name,
+                                        width=14 * cm,
+                                        height=14 * cm,
+                                    )
+                                )
+
+                            story.append(Spacer(1, 0.5 * cm))
+
+                        # ---------- Mask ----------
+
+                        if mask_image is not None:
+                            story.append(
+                                Paragraph("Segmentation mask", styles["Heading2"])
+                            )
+
+                            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                                mask_image.save(tmp.name)
+
+                                story.append(
+                                    PDFImage(
+                                        tmp.name,
+                                        width=14 * cm,
+                                        height=14 * cm,
+                                    )
+                                )
+
+                        # ---------- Build PDF ----------
+
+                        doc.build(story)
+
+                        pdf_buffer.seek(0)
+
                         st.download_button(
-                            label="📥 Скачать текстовый отчёт",
-                            data=io.BytesIO(report_text.encode('utf-8')).getvalue(),
-                            file_name=f"report_{uploaded_file.name}.txt",
-                            mime="text/plain"
+                            label="📄 Download PDF report",
+                            data=pdf_buffer,
+                            file_name=f"report_{uploaded_file.name}.pdf",
+                            mime="application/pdf",
                         )
 
                 else:
