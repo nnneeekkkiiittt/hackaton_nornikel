@@ -25,6 +25,18 @@
 
 ---
 
+## Быстрый запуск
+
+   ```bash
+   git clone https://github.com/nnneeekkkiiittt/hackaton_nornikel.git
+   cd hackaton_nornikel
+   ```
+
+   ```bash
+   docker compose up --build
+   ```
+---
+
 ## Инструкция по использованию
 
 1. Загрузите изображение микрошлифа через интерфейс.

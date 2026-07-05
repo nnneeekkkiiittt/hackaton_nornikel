@@ -25,7 +25,7 @@ class MLClient:
         pil_image = Image.fromarray(image)
 
         buffer = BytesIO()
-        pil_image.save(buffer, format="PNG")
+        pil_image.save(buffer, format="JPEG", quality=95)
 
         request = ml_service_pb2.PredictRequest(
             image=buffer.getvalue()

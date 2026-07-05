@@ -8,8 +8,9 @@ import torchvision.models as models
 import torch.nn as nn
 
 class TalcPredictor:
-    def __init__(self, weights_path, device=None):
+    def __init__(self, weights_path, device=None, talc_threshold=0.85):
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        self.talc_threshold = talc_threshold
         
         self.model = smp.UnetPlusPlus(
             encoder_name="resnet34",
@@ -25,7 +26,8 @@ class TalcPredictor:
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         ])
 
-    def predict_panorama(self, image_np, patch_size=512, stride=512):
+    def predict_panorama(self, image_np, patch_size=512, stride=512, talc_threshold=None):
+        threshold = talc_threshold if talc_threshold is not None else self.talc_threshold
         h_orig, w_orig, c = image_np.shape
         
         pad_y = max(0, patch_size - h_orig)
@@ -45,32 +47,45 @@ class TalcPredictor:
         if x_coords[-1] + patch_size < w:
             x_coords.append(w - patch_size)
 
+        patches_stacked = []
+        coords = []
         for y in y_coords:
             for x in x_coords:
                 patch = image_np[y:y+patch_size, x:x+patch_size]
-                
                 augmented = self.transform(image=patch)
-                patch_tensor = torch.from_numpy(augmented['image'].transpose(2, 0, 1)).float().unsqueeze(0).to(self.device)
-                
-                device_type = "cuda" if "cuda" in str(self.device) else "cpu"
-                with torch.inference_mode():
-                    with torch.amp.autocast(device_type):
-                        preds = self.model(patch_tensor)
-                    preds_class = preds.argmax(dim=1).squeeze(0).cpu().numpy().astype(np.uint8)
-                
-                full_mask[y:y+patch_size, x:x+patch_size] = np.maximum(
-                    full_mask[y:y+patch_size, x:x+patch_size], 
-                    preds_class
-                )
+                patches_stacked.append(augmented['image'].transpose(2, 0, 1))
+                coords.append((y, x))
+        
+        patches_stacked = torch.from_numpy(np.array(patches_stacked)).float()
+        preds_classes = []
+        device_type = "cuda" if "cuda" in str(self.device) else "cpu"
+        
+        batch_size = 8
+        for i in range(0, len(patches_stacked), batch_size):
+            batch = patches_stacked[i:i+batch_size].to(self.device)
+            with torch.inference_mode():
+                with torch.amp.autocast(device_type):
+                    preds = self.model(batch)
+                probs = torch.softmax(preds, dim=1)
+                prob_talc = probs[:, 1] # Class 1 is Talc
+                print(f"[DEBUG] Batch probs (Talc class 1) - Min: {prob_talc.min().item():.4f}, Max: {prob_talc.max().item():.4f}, Mean: {prob_talc.mean().item():.4f}", flush=True)
+                batch_preds_class = (prob_talc > threshold).cpu().numpy().astype(np.uint8)
+            preds_classes.extend(batch_preds_class)
+            
+        for idx, (y, x) in enumerate(coords):
+            full_mask[y:y+patch_size, x:x+patch_size] = np.maximum(
+                full_mask[y:y+patch_size, x:x+patch_size], 
+                preds_classes[idx]
+            )
 
         cropped_mask = full_mask[:h_orig, :w_orig]
-        talc_pixels = np.sum(cropped_mask == 0)
+        talc_pixels = np.sum(cropped_mask == 1)
         total_pixels = h_orig * w_orig
         talc_percentage = (talc_pixels / total_pixels) * 100
         
         orig_img = image_np[:h_orig, :w_orig].copy()
         overlay = orig_img.copy()
-        overlay[cropped_mask == 0] = [0, 120, 255]
+        overlay[cropped_mask == 1] = [0, 120, 255]
         overlay_img = cv2.addWeighted(overlay, 0.4, orig_img, 0.6, 0)
         
         return {

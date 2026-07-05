@@ -106,7 +106,7 @@ if uploaded_file is not None:
                         overlay_bytes = base64.b64decode(res_data.get("overlay"))
                         overlay_image = Image.open(io.BytesIO(overlay_bytes))
                         with col_img1:
-                            st.image(overlay_image, caption="Оверлей сегментации (оранжевый - тальк)", use_container_width=True)
+                            st.image(overlay_image, caption="Оверлей сегментации (голубой - тальк)", use_container_width=True)
                             
                     if res_data.get("mask"):
                         mask_bytes = base64.b64decode(res_data.get("mask"))

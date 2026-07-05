@@ -35,8 +35,20 @@ class MLService(ml_service_pb2_grpc.MLServiceServicer):
             # -----------------------------
             # Инференс
             # -----------------------------
-            result = self.predictor.predict_panorama(image_np)
             class_result = self.class_predictor.predict(image_np)
+            
+            # Эвристика: если классификатор уверен на 85%+, что это не оталькованная руда,
+            # задираем порог обнаружения талька до 0.99, чтобы убрать ложные срабатывания.
+            probs = class_result["probabilities"]
+            not_talcose_prob = probs.get("ordinary", 0.0) + probs.get("refractory", 0.0)
+            
+            talc_thresh = 0.85
+            if not_talcose_prob >= 0.85:
+                talc_thresh = 0.999
+                
+            print(f"[DEBUG] Ore classification: {class_result['class']} (probs: {probs}), Not-talcose prob: {not_talcose_prob:.4f} -> threshold set to: {talc_thresh}", flush=True)
+                
+            result = self.predictor.predict_panorama(image_np, talc_threshold=talc_thresh)
 
             # -----------------------------
             # overlay -> PNG bytes
